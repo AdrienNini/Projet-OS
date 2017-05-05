@@ -5,45 +5,46 @@
 
 int main(int argc, char **argv){
 
-	int pf[2];
-	int fp[2];
-	int vr;
+	// VARIABLES	
 
-	if (pipe(pf) == -1){
+	int pf[2]; // Pipe Père -> Fils
+	int vr; // Résultat du fork()
+
+	// PROGRAM
+
+	if (pipe(pf) == -1){ // Crée et vérifie que la création du pipe n'a pas créé d'érreur
+
+		char error[] = "An error occured during the creation of the pipe\n"; 
+		write(2, error, strlen(error)); // Affiche l'érreur sur STDERR
+
+	}
+
+	if ((vr = fork()) == -1){ // Crée le Process enfant et vérifie qu'il n'a pas créé d'érreur
+
 		char error[] = "An error occured during the creation of the pipe\n";
-		write(2, error, strlen(error));
-	}
+		write(2, error, strlen(error)); // Affiche l'érreur sur STDERR
 
-	if (pipe(fp) == -1){
-		char error[] = "An error occured during the creation of the pipe\n";	
-		write(2, error, strlen(error));
-	}
+	} else if (vr == 0) { // Process Fils
 
-	if ((vr = fork()) == -1){
-		char error[] = "An error occured during the creation of the pipe\n";
-		write(2, error, strlen(error));
-	}
-
-	 if (vr == 0) {
 		char buffer[255];
-		int nbRead;
-		if ((nbRead = read(pf[0], buffer, strlen(argv[1]))) == strlen(argv[1])){
-			printf("Child : %s\n", buffer);
-			write(fp[1], buffer, nbRead);
+		int nbRead; // Taille de la chaine de caractère passée dans le pipe
+
+		if ((nbRead = read(pf[0], buffer, strlen(argv[1]))) == strlen(argv[1])){ // SI la chaine récupérée dans le pipe à la même taille que la chaine passée en argument -> OK
+			write(1, buffer, nbRead); // Affiche la chaine du Buffer sur STDOUT
+			
 		} else {
-			char error[] = "Error";
-			write(2, error, strlen(error));
+			char error[] = "String length failure\n";
+			write(2, error, strlen(error)); // Affiche une érreur sur SDTERR
 		}
 
 		exit(0);
-	} else {
-		char buffer[255];
-		int nbRead, nbWrite;
 
-		nbWrite = write(pf[1], argv[1], strlen(argv[1]));
-		printf("Parent : %s\n", argv[1]);
-		nbRead = read(fp[0], buffer, nbWrite);
-		write(1, buffer, nbRead);
+	} else { // Process Père
+
+		char buffer[255];
+		int nbWrite; // Taille de la chaine de caractère envoyé dans le pipe
+
+		nbWrite = write(pf[1], argv[1], strlen(argv[1])); // Envoie la chaine passée en argument dans le Pipe PF
 
 		exit(0); 
 	}
